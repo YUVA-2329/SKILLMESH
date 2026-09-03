@@ -122,15 +122,15 @@ export const LandingHeroView: React.FC<LandingHeroViewProps> = ({
       metrics: 'Active Cockpit'
     },
     {
-      id: 'universe',
-      title: '3D Living Skill Universe',
-      tagline: 'Spatial Interactive Capability Topology',
+      id: 'skills',
+      title: 'Living Verified Skill Ledger',
+      tagline: 'Cryptographic Capability Network',
       category: 'CORE',
-      icon: <Layers className="w-5 h-5 text-[#4a47d2]" />,
-      color: 'from-[#4a47d2]/10 to-[#4a47d2]/5 text-[#4a47d2]',
-      description: 'Explore your entire technical stack in a 3D WebGL universe with orbital controls, node decay rates, and connected artifact inspectors.',
-      keyFeatures: ['3D WebGL Raycasting', 'Sub-Mesh Isolation', 'Decay & Recency Indicators'],
-      metrics: '18 Nodes Mapped'
+      icon: <Award className="w-5 h-5 text-[#0058bc]" />,
+      color: 'from-[#0058bc]/10 to-[#0058bc]/5 text-[#0058bc]',
+      description: 'Explore your entire technical stack with verified confidence ratings, decay recency indicators, and associated code artifacts.',
+      keyFeatures: ['Cryptographic Proofs', 'Real-time Decay Rates', 'Why-This-Score Breakdown'],
+      metrics: '18 Verified Skills'
     },
     {
       id: 'pathway',
@@ -347,13 +347,13 @@ export const LandingHeroView: React.FC<LandingHeroViewProps> = ({
                 </button>
               </Magnet>
               
-              <Magnet magnetStrength={0.3} activeScale={1.03} onClick={() => handleAction('universe')}>
+              <Magnet magnetStrength={0.3} activeScale={1.03} onClick={() => handleAction('skills')}>
                 <button
-                  id="hero-universe-btn"
+                  id="hero-skills-btn"
                   className="px-5 py-3.5 rounded-2xl glass-frost text-[#1b1b1d] hover:bg-white text-sm font-bold flex items-center gap-2 border border-black/5 shadow-2xs cursor-pointer"
                 >
-                  <Layers className="w-4 h-4 text-[#0058bc]" />
-                  Explore 3D Universe
+                  <Award className="w-4 h-4 text-[#0058bc]" />
+                  Explore Verified Skills
                 </button>
               </Magnet>
 
@@ -641,11 +641,11 @@ export const LandingHeroView: React.FC<LandingHeroViewProps> = ({
               </div>
 
               <button
-                onClick={() => handleAction('universe')}
+                onClick={() => handleAction('skills')}
                 className="mt-6 w-full py-2.5 rounded-xl bg-[#0058bc] hover:bg-[#004493] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <Layers className="w-4 h-4" />
-                Inspect in 3D Spatial Universe
+                <Award className="w-4 h-4" />
+                Inspect in Skills Ledger
               </button>
             </SpotlightCard>
 
@@ -855,10 +855,10 @@ export const LandingHeroView: React.FC<LandingHeroViewProps> = ({
                 </button>
               </Magnet>
 
-              <Magnet magnetStrength={0.3} activeScale={1.03} onClick={() => handleAction('universe')}>
+              <Magnet magnetStrength={0.3} activeScale={1.03} onClick={() => handleAction('skills')}>
                 <button className="px-6 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold flex items-center gap-2 backdrop-blur-md border border-white/20 cursor-pointer">
-                  <Layers className="w-4 h-4" />
-                  View 3D Universe
+                  <Award className="w-4 h-4" />
+                  Explore Verified Skills
                 </button>
               </Magnet>
 

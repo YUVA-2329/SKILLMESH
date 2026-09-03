@@ -144,25 +144,62 @@ export const ProjectsWorkspaceView: React.FC<ProjectsWorkspaceViewProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-xs font-bold text-[#0058bc] uppercase tracking-wider flex items-center gap-1.5">
-            <FolderGit2 className="w-4 h-4" />
-            AI Project Generator & Proof Engine
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1b1b1d] tracking-tight">
-            Gap-Closing Projects Workspace
+          <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#0058bc] bg-[#0058bc]/10 px-2.5 py-1 rounded-full">
+            REAL-WORLD PRACTICE
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#1b1b1d] tracking-tight mt-2">
+            Your Projects
           </h1>
-          <p className="text-xs text-[#717786] mt-1">
-            Build bespoke real-world systems specifically targeted to eliminate missing skill nodes in your mesh.
+          <p className="text-sm text-[#555a64] font-medium mt-0.5">
+            Build real projects to gain skills and earn verifiable proof for your passport.
           </p>
         </div>
 
         <button
           onClick={() => setIsGeneratorModalOpen(true)}
-          className="magnetic-btn px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0058bc] to-[#4a47d2] text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0058bc]/25 self-start sm:self-auto"
+          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#0058bc] to-[#4a47d2] text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-[#0058bc]/25 self-start sm:self-auto hover:scale-[1.02] transition-all cursor-pointer"
         >
           <Sparkles className="w-4 h-4" />
-          Generate Custom Gap Project
+          Generate Custom Project
         </button>
+      </div>
+
+      {/* BUILD NEXT: AI-Recommended Project Based on Skill Gaps */}
+      <div className="glass-pearl rounded-3xl p-6 sm:p-7 border-2 border-[#0058bc]/25 shadow-lg relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-2 flex-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0058bc]/10 text-[#0058bc] text-xs font-black tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5" />
+              BUILD NEXT • AI RECOMMENDATION
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-[#1b1b1d] tracking-tight">
+              Build an AI Image Classifier
+            </h2>
+            <p className="text-xs sm:text-sm text-[#44474e] font-medium">
+              Train a convolutional neural network on real image datasets and deploy a web inference API.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs font-bold text-[#717786]">You'll practice:</span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-white text-[#1b1b1d] text-xs font-semibold border border-black/5 shadow-2xs">Python</span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-white text-[#1b1b1d] text-xs font-semibold border border-black/5 shadow-2xs">Machine Learning</span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-white text-[#1b1b1d] text-xs font-semibold border border-black/5 shadow-2xs">Computer Vision</span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-white text-[#1b1b1d] text-xs font-semibold border border-black/5 shadow-2xs">Deployment</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (projects[0]) setSelectedProject(projects[0]);
+              try {
+                confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+              } catch (e) {}
+            }}
+            className="px-6 py-3 rounded-2xl bg-[#0058bc] hover:bg-[#004493] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#0058bc]/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex-shrink-0"
+          >
+            <span>Start Building</span>
+            <Play className="w-3.5 h-3.5 fill-current" />
+          </button>
+        </div>
       </div>
 
       {/* Main Grid: Project List on Left, Active Workspace on Right */}

@@ -3,7 +3,17 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { 
+  getMongoStatus, 
+  findUserDocumentByEmail, 
+  findUserDocumentByAuthId,
+  findUserDocument,
+  createUserDocument, 
+  updateUserDocument,
+  listAllUserSummaries
+} from './server/mongo';
 
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const app = express();
@@ -22,14 +32,470 @@ function getGenAI(): GoogleGenAI | null {
   return genAIClient;
 }
 
+import fs from "fs";
+
+const STORAGE_FILE = path.join(process.cwd(), "data", "storage.json");
+
+function readStorage(): Record<string, any> {
+  try {
+    if (fs.existsSync(STORAGE_FILE)) {
+      const content = fs.readFileSync(STORAGE_FILE, "utf-8");
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error("Error reading storage file:", err);
+  }
+  return {};
+}
+
+function writeStorage(data: Record<string, any>): void {
+  try {
+    const dir = path.dirname(STORAGE_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error writing storage file:", err);
+  }
+}
+
 // 1. Health check
 app.get("/api/health", (req, res) => {
+  const store = readStorage();
   res.json({ 
     status: "ok", 
-    service: "SkillMesh Platform Intelligence API", 
+    service: "SkillMesh Living AI Career OS", 
     timestamp: new Date().toISOString(),
-    aiEnabled: !!process.env.GEMINI_API_KEY 
+    aiEnabled: !!process.env.GEMINI_API_KEY,
+    storage: {
+      type: "persistent_local_storage",
+      status: "active",
+      profilesSaved: Object.keys(store).length
+    }
   });
+});
+
+// Storage Status Endpoint
+app.get("/api/storage/status", (req, res) => {
+  const store = readStorage();
+  res.json({
+    success: true,
+    storageType: "Persistent Local & Server-Side Storage",
+    status: "healthy",
+    profileCount: Object.keys(store).length,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Get all stored profiles
+app.get("/api/storage/profiles", (req, res) => {
+  const store = readStorage();
+  res.json({
+    success: true,
+    bundle: store
+  });
+});
+
+// Save or sync all profiles
+app.post("/api/storage/profiles", (req, res) => {
+  try {
+    const { bundle } = req.body;
+    if (bundle && typeof bundle === "object") {
+      const current = readStorage();
+      const updated = { ...current, ...bundle };
+      writeStorage(updated);
+      return res.json({ success: true, count: Object.keys(updated).length });
+    }
+    res.status(400).json({ success: false, error: "bundle must be an object" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update a single profile
+app.put("/api/storage/profiles/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user } = req.body;
+    if (!user || !user.name) {
+      return res.status(400).json({ success: false, error: "Valid user data with name is required" });
+    }
+    const store = readStorage();
+    if (store[id]) {
+      store[id].user = { ...store[id].user, ...user };
+    } else {
+      store[id] = { user, skills: [], evidence: [], projects: [], careerGoal: {} };
+    }
+    writeStorage(store);
+    res.json({ success: true, profile: store[id] });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// MONGODB ATLAS PRODUCTION INTEGRATION API
+// ==========================================
+
+// Helper: Extract authenticated user identifier (authId or email) from request
+function getAuthIdentifier(req: express.Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7).trim();
+    if (token) return token;
+  }
+  const xAuthId = req.headers['x-auth-id'] as string;
+  if (xAuthId && xAuthId.trim()) return xAuthId.trim();
+
+  const xEmail = req.headers['x-user-email'] as string;
+  if (xEmail && xEmail.trim()) return xEmail.trim().toLowerCase();
+
+  const qEmail = req.query.email as string;
+  if (qEmail && qEmail.trim()) return qEmail.trim().toLowerCase();
+
+  return null;
+}
+
+// 1. Live MongoDB Status & Diagnostics Endpoint
+app.get("/api/mongodb/status", async (req, res) => {
+  try {
+    const status = await getMongoStatus();
+    res.json(status);
+  } catch (error: any) {
+    res.status(500).json({
+      configured: !!process.env.MONGODB_URI,
+      connected: false,
+      status: "disconnected",
+      dbName: process.env.MONGODB_DB || process.env.MONGODB_DB_NAME || "skillmesh",
+      collection: "users",
+      documentCount: 0,
+      error: error.message,
+      serverTime: new Date().toISOString()
+    });
+  }
+});
+
+// 2. List All User Accounts in MongoDB (Summary for Inspector / Switcher)
+app.get("/api/mongodb/accounts", async (req, res) => {
+  try {
+    const mongoStatus = await getMongoStatus();
+    if (mongoStatus.connected) {
+      const summaries = await listAllUserSummaries();
+      return res.json({ success: true, connected: true, accounts: summaries });
+    }
+    // Local fallback list
+    const store = readStorage();
+    const accounts = Object.values(store).map((doc: any) => ({
+      authId: doc.authId || doc._id || '',
+      name: doc.name || doc.user?.name || 'Anonymous',
+      email: doc.email || doc.user?.email || '',
+      updatedAt: doc.updatedAt || new Date().toISOString()
+    }));
+    res.json({ success: true, connected: false, accounts });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 3. User Sign Up or Log In: POST /api/users
+// ONE ACCOUNT = ONE MONGODB DOCUMENT
+const handleCreateOrLoginUser = async (req: express.Request, res: express.Response) => {
+  try {
+    const { name, email, authId, profile, skills, projects, connections, interests, recommendations, savedOpportunities, aiRecommendations } = req.body;
+
+    if (!email || !name) {
+      return res.status(400).json({ success: false, error: "Name and email are required to authenticate with SkillMesh." });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const mongoStatus = await getMongoStatus();
+
+    if (mongoStatus.connected) {
+      // Step A: Check if this user already exists by authId or email
+      let existingDoc = null;
+      if (authId) {
+        existingDoc = await findUserDocumentByAuthId(authId);
+      }
+      if (!existingDoc) {
+        existingDoc = await findUserDocumentByEmail(normalizedEmail);
+      }
+
+      if (existingDoc) {
+        // Return existing document - DO NOT CREATE DUPLICATE
+        return res.json({
+          success: true,
+          isNew: false,
+          savedToMongo: true,
+          authId: existingDoc.authId,
+          user: existingDoc,
+          document: existingDoc,
+          message: "Existing MongoDB user document retrieved."
+        });
+      }
+
+      // Step B: Create a brand new isolated MongoDB document
+      const { document } = await createUserDocument({
+        authId: authId || undefined,
+        name: name.trim(),
+        email: normalizedEmail,
+        profile: profile || {},
+        skills: skills || [],
+        projects: projects || [],
+        connections: connections || [],
+        interests: interests || [],
+        recommendations: recommendations || [],
+        savedOpportunities: savedOpportunities || [],
+        aiRecommendations: aiRecommendations || null
+      });
+
+      return res.json({
+        success: true,
+        isNew: true,
+        savedToMongo: true,
+        authId: document.authId,
+        user: document,
+        document,
+        message: "Created new isolated MongoDB document in 'users' collection."
+      });
+    } else {
+      // Local fallback storage
+      const store = readStorage();
+      const accountKey = `user-${normalizedEmail.replace(/[^a-z0-9]/g, '-')}`;
+      let localDoc = store[accountKey];
+      let isNew = false;
+      if (!localDoc) {
+        isNew = true;
+        localDoc = {
+          _id: `local-${Date.now()}`,
+          authId: `local_auth_${Date.now()}`,
+          name: name.trim(),
+          email: normalizedEmail,
+          profile: profile || {},
+          skills: skills || [],
+          projects: projects || [],
+          connections: connections || [],
+          interests: interests || [],
+          recommendations: recommendations || [],
+          savedOpportunities: savedOpportunities || [],
+          aiRecommendations: aiRecommendations || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        store[accountKey] = localDoc;
+        writeStorage(store);
+      }
+
+      return res.json({
+        success: true,
+        isNew,
+        savedToMongo: false,
+        mongoStatus: 'disconnected',
+        authId: localDoc.authId,
+        user: localDoc,
+        document: localDoc,
+        message: "MongoDB Atlas is not connected. User stored in local fallback storage."
+      });
+    }
+  } catch (error: any) {
+    console.error("POST /api/users error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+app.post("/api/users", handleCreateOrLoginUser);
+app.post("/api/mongodb/auth/login-or-register", handleCreateOrLoginUser);
+
+// 4. Authenticated User Retrieval: GET /api/users/me
+// Determines the authenticated user, verifies token, retrieves that exact document from MongoDB
+const handleGetCurrentUser = async (req: express.Request, res: express.Response) => {
+  try {
+    const authId = getAuthIdentifier(req);
+
+    if (!authId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Unauthorized: Missing authentication credentials (Authorization header, x-auth-id, or x-user-email)." 
+      });
+    }
+
+    const mongoStatus = await getMongoStatus();
+
+    if (mongoStatus.connected) {
+      const doc = await findUserDocument(authId);
+      if (!doc) {
+        return res.status(404).json({ success: false, error: "User account document not found in MongoDB." });
+      }
+
+      return res.json({
+        success: true,
+        savedToMongo: true,
+        authId: doc.authId,
+        user: doc,
+        document: doc
+      });
+    } else {
+      // Local fallback lookup
+      const store = readStorage();
+      const accountKey = `user-${authId.replace(/[^a-z0-9]/g, '-')}`;
+      const localDoc = store[accountKey] || Object.values(store).find((p: any) => 
+        p.authId === authId || p.email === authId || p.user?.email === authId
+      );
+
+      if (!localDoc) {
+        return res.status(404).json({ success: false, error: "User profile not found in local storage." });
+      }
+
+      return res.json({
+        success: true,
+        savedToMongo: false,
+        mongoStatus: 'disconnected',
+        authId: localDoc.authId,
+        user: localDoc,
+        document: localDoc
+      });
+    }
+  } catch (error: any) {
+    console.error("GET /api/users/me error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+app.get("/api/users/me", handleGetCurrentUser);
+app.get("/api/mongodb/user/current", handleGetCurrentUser);
+
+// 5. Update Current User's Document: PATCH /api/users/me
+// The backend determines the authenticated user from the token. A user can only update their own document.
+const handleUpdateCurrentUser = async (req: express.Request, res: express.Response) => {
+  try {
+    const authId = getAuthIdentifier(req);
+
+    if (!authId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Unauthorized: Missing authentication credentials." 
+      });
+    }
+
+    const updates = req.body;
+    const mongoStatus = await getMongoStatus();
+
+    if (mongoStatus.connected) {
+      // Only update the authenticated user's document
+      const updatedDoc = await updateUserDocument(authId, updates);
+      if (!updatedDoc) {
+        // If not found, create new document
+        const { document } = await createUserDocument({
+          authId: authId.startsWith('auth_') ? authId : undefined,
+          name: updates.name || authId.split('@')[0],
+          email: updates.email || (authId.includes('@') ? authId : `${authId}@skillmesh.ai`),
+          profile: updates.profile,
+          skills: updates.skills,
+          projects: updates.projects,
+          connections: updates.connections,
+          interests: updates.interests,
+          recommendations: updates.recommendations,
+          savedOpportunities: updates.savedOpportunities,
+          aiRecommendations: updates.aiRecommendations
+        });
+        return res.json({
+          success: true,
+          savedToMongo: true,
+          authId: document.authId,
+          user: document,
+          document
+        });
+      }
+
+      return res.json({
+        success: true,
+        savedToMongo: true,
+        authId: updatedDoc.authId,
+        user: updatedDoc,
+        document: updatedDoc,
+        message: "Saved to MongoDB ✓"
+      });
+    } else {
+      // Local storage fallback
+      const store = readStorage();
+      const accountKey = `user-${authId.replace(/[^a-z0-9]/g, '-')}`;
+      const existing = store[accountKey] || {
+        _id: `local-${Date.now()}`,
+        authId,
+        name: updates.name || authId.split('@')[0],
+        email: updates.email || authId,
+        createdAt: new Date().toISOString()
+      };
+
+      const merged = {
+        ...existing,
+        ...updates,
+        authId: existing.authId || authId,
+        updatedAt: new Date().toISOString()
+      };
+      store[accountKey] = merged;
+      writeStorage(store);
+
+      return res.json({
+        success: true,
+        savedToMongo: false,
+        mongoStatus: 'disconnected',
+        authId: merged.authId,
+        user: merged,
+        document: merged,
+        message: "Saved to local fallback storage (MongoDB Atlas is disconnected)."
+      });
+    }
+  } catch (error: any) {
+    console.error("PATCH /api/users/me error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+app.patch("/api/users/me", handleUpdateCurrentUser);
+app.put("/api/users/me", handleUpdateCurrentUser);
+app.put("/api/mongodb/user/current", handleUpdateCurrentUser);
+
+// 6. Raw Live Document Inspector Endpoint: GET /api/mongodb/user/raw-document
+app.get("/api/mongodb/user/raw-document", async (req, res) => {
+  try {
+    const authId = getAuthIdentifier(req);
+    const mongoStatus = await getMongoStatus();
+
+    if (!authId) {
+      return res.status(400).json({ success: false, error: "Authentication identifier required" });
+    }
+
+    if (mongoStatus.connected) {
+      const doc = await findUserDocument(authId);
+      return res.json({
+        success: true,
+        connected: true,
+        dbName: mongoStatus.dbName,
+        collection: mongoStatus.collection,
+        document: doc || null,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      const store = readStorage();
+      const accountKey = `user-${authId.replace(/[^a-z0-9]/g, '-')}`;
+      const localDoc = store[accountKey] || Object.values(store).find((p: any) => 
+        p.authId === authId || p.email === authId || p.user?.email === authId
+      );
+
+      return res.json({
+        success: true,
+        connected: false,
+        dbName: mongoStatus.dbName,
+        collection: mongoStatus.collection,
+        document: localDoc || null,
+        error: mongoStatus.error || "MongoDB is not connected",
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // 2. Resume & Skill Extraction Endpoint

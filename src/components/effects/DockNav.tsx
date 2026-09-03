@@ -2,17 +2,14 @@ import React, { useRef, useState } from 'react';
 import { ActiveTab } from '../../types';
 import { 
   Sparkles, 
-  Compass, 
   Layers, 
-  GitBranch, 
-  ShieldCheck, 
   FolderGit2, 
   Briefcase, 
-  Users, 
-  Github, 
-  FileText, 
-  TrendingUp, 
-  Shield
+  Award,
+  BookOpen,
+  Bot,
+  ShieldCheck,
+  Compass
 } from 'lucide-react';
 import { soundEffects } from './SoundFeedback';
 
@@ -27,17 +24,12 @@ export const DockNav: React.FC<DockNavProps> = ({ activeTab, onNavigate }) => {
 
   const items: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: 'Home', icon: <Sparkles className="w-4 h-4" /> },
-    { id: 'command', label: 'Cockpit', icon: <Compass className="w-4 h-4" /> },
-    { id: 'universe', label: 'Universe', icon: <Layers className="w-4 h-4" /> },
-    { id: 'pathway', label: 'Pathway', icon: <GitBranch className="w-4 h-4" /> },
-    { id: 'evidence', label: 'Evidence', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'skills', label: 'My Skills', icon: <Award className="w-4 h-4" /> },
+    { id: 'ai', label: 'AI', icon: <Bot className="w-4 h-4" /> },
     { id: 'projects', label: 'Projects', icon: <FolderGit2 className="w-4 h-4" /> },
-    { id: 'opportunities', label: 'Market', icon: <Briefcase className="w-4 h-4" /> },
-    { id: 'people', label: 'Investors', icon: <Users className="w-4 h-4" /> },
-    { id: 'github', label: 'GitHub', icon: <Github className="w-4 h-4" /> },
-    { id: 'resume', label: 'Resume', icon: <FileText className="w-4 h-4" /> },
-    { id: 'simulator', label: 'Simulator', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'settings', label: 'Privacy', icon: <Shield className="w-4 h-4" /> }
+    { id: 'learn', label: 'Learn', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'opportunities', label: 'Opportunities', icon: <Briefcase className="w-4 h-4" /> },
+    { id: 'passport', label: 'Passport', icon: <ShieldCheck className="w-4 h-4" /> }
   ];
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

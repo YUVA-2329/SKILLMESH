@@ -192,8 +192,14 @@ export interface GitHubRepoAnalysis {
 }
 
 export interface UserProfile {
+  id?: string;
   name: string;
+  title?: string;
+  country?: string;
   role: string;
+  organization?: string;
+  experience?: string;
+  industry?: string;
   intelligenceLevel: number;
   avatar: string;
   email: string;
@@ -205,6 +211,23 @@ export interface UserProfile {
   githubConnected: boolean;
   githubUsername?: string;
   resumeUploaded: boolean;
+  primarySkills?: string[];
+  secondarySkills?: string[];
+  strongestSkills?: string[];
+  emergingSkills?: string[];
+  skillGaps?: string[];
+  recommendedSkills?: string[];
+  suggestedLearningPaths?: string[];
+  interests?: string[];
+  investmentInterests?: string[];
+  projectInterests?: string[];
+  preferredDomains?: string[];
+  matchingOpportunities?: string[];
+  skillsDemonstratedCount?: number;
+  projectsCompletedCount?: number;
+  verificationLevel?: string;
+  isDemo?: boolean;
+  profileType?: 'indian' | 'foreign_investor' | 'custom';
   privacy: {
     profileVisibility: 'public' | 'connections' | 'private';
     skillMeshVisibility: 'public' | 'connections' | 'private';
@@ -225,12 +248,15 @@ export interface ChatMessage {
 export type ActiveTab = 
   | 'home'
   | 'landing' 
+  | 'skills'
+  | 'ai'
+  | 'projects' 
+  | 'learn'
+  | 'opportunities' 
+  | 'passport'
   | 'command' 
-  | 'universe' 
   | 'evidence' 
   | 'pathway' 
-  | 'projects' 
-  | 'opportunities' 
   | 'people' 
   | 'team' 
   | 'github' 

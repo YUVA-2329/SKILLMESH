@@ -15,12 +15,34 @@ import { LiquidBackgroundShader } from './components/canvas/LiquidBackgroundShad
 import { TopNavBar } from './components/navigation/TopNavBar';
 import { CommandPaletteModal } from './components/navigation/CommandPaletteModal';
 import { AskSkillMeshDrawer } from './components/chat/AskSkillMeshDrawer';
+import { NameLoginModal } from './components/modals/NameLoginModal';
+import { EditProfilePasscodeModal } from './components/modals/EditProfilePasscodeModal';
+import { 
+  getStoredProfilesBundle, 
+  getIdentifiedName, 
+  getStoredActiveProfileId, 
+  getComprehensiveProfile, 
+  identifyUserByName 
+} from './lib/storage';
+import {
+  fetchCurrentUserFromMongo,
+  syncMongoLoginOrRegister,
+  persistUserDataToMongo,
+  getStoredAuthEmail,
+  setStoredAuthEmail,
+  getStoredAuthId
+} from './lib/mongoClient';
 import { DockNav } from './components/effects/DockNav';
+import { SkillMeshIntroShader } from './components/effects/SkillMeshIntroShader';
 
 // Views
+import { HomeSimpleView } from './components/views/HomeSimpleView';
+import { MySkillsSimpleView } from './components/views/MySkillsSimpleView';
+import { AICopilotView } from './components/views/AICopilotView';
+import { LearnPersonalizedView } from './components/views/LearnPersonalizedView';
+import { SkillPassportView } from './components/views/SkillPassportView';
 import { LandingHeroView } from './components/views/LandingHeroView';
 import { CommandCenterDashboard } from './components/views/CommandCenterDashboard';
-import { SkillMeshUniverseView } from './components/views/SkillMeshUniverseView';
 import { EvidenceVerificationView } from './components/views/EvidenceVerificationView';
 import { AdaptivePathwayView } from './components/views/AdaptivePathwayView';
 import { ProjectsWorkspaceView } from './components/views/ProjectsWorkspaceView';
@@ -31,6 +53,7 @@ import { ResumeImporterView } from './components/views/ResumeImporterView';
 import { CareerSimulatorView } from './components/views/CareerSimulatorView';
 import { TeamIntelligenceView } from './components/views/TeamIntelligenceView';
 import { SettingsPrivacyView } from './components/views/SettingsPrivacyView';
+import { MongoInspectorButton } from './components/mongodb/MongoInspectorButton';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
@@ -48,6 +71,126 @@ export default function App() {
   // Command palette and AI Drawer modals
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isAskDrawerOpen, setIsAskDrawerOpen] = useState(false);
+  const [isNameModalOpen, setIsNameModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [isPlayingIntro, setIsPlayingIntro] = useState(true);
+  const [pendingNameModal, setPendingNameModal] = useState(false);
+
+  // Persistent profile loading on mount (restores from MongoDB or local fallback)
+  useEffect(() => {
+    // 1. Try to restore active user session from MongoDB Atlas first
+    fetchCurrentUserFromMongo().then((res) => {
+      if (res.success && res.document) {
+        const doc = res.document;
+        const restoredUser: UserProfile = {
+          ...initialUserProfile,
+          ...(doc.profile || {}),
+          id: doc.authId || `user-${doc._id}`,
+          name: doc.name || initialUserProfile.name,
+          email: doc.email || initialUserProfile.email
+        };
+        setUser(restoredUser);
+        if (doc.skills && Array.isArray(doc.skills) && doc.skills.length > 0) {
+          setSkills(doc.skills);
+          setSelectedSkill(doc.skills[0]);
+        }
+        if (doc.projects && Array.isArray(doc.projects) && doc.projects.length > 0) {
+          setProjects(doc.projects);
+        }
+        setIsPlayingIntro(false);
+        return;
+      }
+
+      // 2. Fallback to local profile cache
+      const activeId = getStoredActiveProfileId();
+      const activeName = getIdentifiedName();
+      if (activeId || activeName) {
+        const prof = getComprehensiveProfile(activeId || activeName || 'Arjun Mehta');
+        setUser(prof.user);
+        setSkills(prof.skills);
+        setEvidence(prof.evidence);
+        setProjects(prof.projects);
+        setCareerGoal(prof.careerGoal);
+      } else {
+        // First application launch: initialize persistent predefined profiles & prompt name after intro
+        getStoredProfilesBundle();
+        setPendingNameModal(true);
+      }
+    });
+  }, []);
+
+  const handleIntroComplete = () => {
+    setIsPlayingIntro(false);
+    if (pendingNameModal) {
+      setIsNameModalOpen(true);
+      setPendingNameModal(false);
+    }
+  };
+
+  const handleSelectName = async (name: string, email?: string) => {
+    const targetEmail = (email || `${name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`).trim().toLowerCase();
+    
+    // Call MongoDB Atlas registration/login (One Account = One Document)
+    const res = await syncMongoLoginOrRegister({
+      name,
+      email: targetEmail,
+      profile: {
+        bio: '',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+        location: 'Global',
+        education: 'Computer Science',
+        experience: '3+ Years'
+      },
+      skills: skills,
+      projects: projects,
+      connections: [],
+      interests: []
+    });
+
+    if (res.success && res.document) {
+      const doc = res.document;
+      const mappedUser: UserProfile = {
+        ...initialUserProfile,
+        ...(doc.profile || {}),
+        id: doc.authId || `user-${doc._id}`,
+        name: doc.name || name,
+        email: doc.email || targetEmail
+      };
+      setUser(mappedUser);
+      if (doc.skills && Array.isArray(doc.skills) && doc.skills.length > 0) {
+        setSkills(doc.skills);
+        setSelectedSkill(doc.skills[0]);
+      }
+      if (doc.projects && Array.isArray(doc.projects) && doc.projects.length > 0) {
+        setProjects(doc.projects);
+      }
+    } else {
+      const prof = identifyUserByName(name, targetEmail);
+      setUser(prof.user);
+      setSkills(prof.skills);
+      setEvidence(prof.evidence);
+      setProjects(prof.projects);
+      setCareerGoal(prof.careerGoal);
+    }
+    setIsNameModalOpen(false);
+  };
+
+  const handleSaveProfile = async (updatedUser: UserProfile) => {
+    setUser(updatedUser);
+    const identifier = updatedUser.email || getStoredAuthEmail();
+    if (identifier) {
+      await persistUserDataToMongo(identifier, {
+        name: updatedUser.name,
+        profile: {
+          bio: updatedUser.summary,
+          avatar: updatedUser.avatar,
+          location: updatedUser.country,
+          experience: updatedUser.experience,
+          title: updatedUser.title || updatedUser.role
+        }
+      });
+    }
+  };
   const [askDrawerInitialPrompt, setAskDrawerInitialPrompt] = useState<string | undefined>();
 
   // Global keyboard shortcuts (Cmd+K, etc.)
@@ -117,7 +260,7 @@ export default function App() {
         skillFitScore: Math.min(100, prev.skillFitScore + 4)
       }));
     }
-    setActiveTab('universe');
+    setActiveTab('skills');
   };
 
   const handleAddSkillsFromGitHub = (detected: { skill: string; evidenceStrength: any; reason: string }[]) => {
@@ -147,6 +290,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f7f9fd] text-[#1b1b1d] font-sans antialiased relative selection:bg-[#0058bc]/20 selection:text-[#0058bc]">
+      {/* 2-Second Premium 3D Shader Intro Animation */}
+      {isPlayingIntro && (
+        <SkillMeshIntroShader
+          onComplete={handleIntroComplete}
+          onSkip={handleIntroComplete}
+          autoCloseDelay={450}
+        />
+      )}
+
       {/* Ambient Interactive WebGL Liquid Background Shader */}
       <LiquidBackgroundShader />
 
@@ -157,6 +309,9 @@ export default function App() {
         onSelectTab={setActiveTab}
         user={user}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenIdentityModal={() => setIsNameModalOpen(true)}
+        onOpenEditProfileModal={() => setIsEditProfileModalOpen(true)}
+        onPlayIntro={() => setIsPlayingIntro(true)}
         onOpenAskAI={() => {
           setAskDrawerInitialPrompt(undefined);
           setIsAskDrawerOpen(true);
@@ -169,11 +324,63 @@ export default function App() {
 
       {/* Main View Container */}
       <main className="pt-20 sm:pt-24 px-2 sm:px-4 max-w-7xl mx-auto min-h-[calc(100vh-80px)]">
-        {(activeTab === 'home' || activeTab === 'landing') && (
+        {activeTab === 'home' && (
+          <HomeSimpleView
+            user={user}
+            skills={skills}
+            onNavigate={setActiveTab}
+            onOpenAskAI={handleOpenAskWithPrompt}
+            onUpdateGoal={handleUpdateTargetRole}
+          />
+        )}
+
+        {activeTab === 'landing' && (
           <LandingHeroView
             onNavigate={setActiveTab}
             skills={skills}
             user={user}
+          />
+        )}
+
+        {activeTab === 'skills' && (
+          <MySkillsSimpleView
+            skills={skills}
+            user={user}
+            onNavigate={setActiveTab}
+            onSelectSkillForGraph={(skill) => {
+              setSelectedSkill(skill);
+              setActiveTab('skills');
+            }}
+            onAddSkill={(newSkill) => {
+              setSkills((prev) => [newSkill, ...prev]);
+            }}
+          />
+        )}
+
+        {activeTab === 'ai' && (
+          <AICopilotView
+            user={user}
+            skills={skills}
+            onNavigate={setActiveTab}
+            initialPrompt={askDrawerInitialPrompt}
+          />
+        )}
+
+        {activeTab === 'learn' && (
+          <LearnPersonalizedView
+            user={user}
+            skills={skills}
+            onNavigate={setActiveTab}
+            onSkillLeveledUp={handleSkillLeveledUp}
+          />
+        )}
+
+        {activeTab === 'passport' && (
+          <SkillPassportView
+            user={user}
+            skills={skills}
+            evidence={evidence}
+            onNavigate={setActiveTab}
           />
         )}
 
@@ -191,19 +398,9 @@ export default function App() {
             onNavigate={setActiveTab}
             onSelectSkill={(skill) => {
               setSelectedSkill(skill);
-              setActiveTab('universe');
+              setActiveTab('skills');
             }}
             onAskAI={handleOpenAskWithPrompt}
-          />
-        )}
-
-        {activeTab === 'universe' && (
-          <SkillMeshUniverseView
-            skills={skills}
-            selectedSkill={selectedSkill}
-            onSelectSkill={setSelectedSkill}
-            onNavigate={setActiveTab}
-            user={user}
           />
         )}
 
@@ -282,7 +479,7 @@ export default function App() {
         onNavigate={setActiveTab}
         onSelectSkill={(skill) => {
           setSelectedSkill(skill);
-          setActiveTab('universe');
+          setActiveTab('skills');
         }}
         skills={skills}
         opportunities={opportunities}
@@ -298,6 +495,44 @@ export default function App() {
         skills={skills}
         careerGoal={careerGoal}
         initialPrompt={askDrawerInitialPrompt}
+      />
+
+      {/* Name-Only Login & Profile Selector Modal */}
+      <NameLoginModal
+        isOpen={isNameModalOpen}
+        currentName={user.name}
+        canDismiss={!!getIdentifiedName() || !!getStoredActiveProfileId()}
+        onClose={() => setIsNameModalOpen(false)}
+        onSelectName={handleSelectName}
+      />
+
+      {/* Passcode-Protected Edit Profile Modal (Code: 0000) */}
+      <EditProfilePasscodeModal
+        isOpen={isEditProfileModalOpen}
+        user={user}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        onSaveProfile={handleSaveProfile}
+      />
+
+      {/* MongoDB Atlas Live Database Inspector & Status Button (Bottom-Right) */}
+      <MongoInspectorButton
+        currentUser={user}
+        skillsCount={skills.length}
+        projectsCount={projects.length}
+        connectionsCount={team.connectionsCount || 28}
+        onSwitchAccount={handleSelectName}
+        onRefresh={() => {
+          const activeId = getStoredActiveProfileId();
+          const activeName = getIdentifiedName();
+          if (activeId || activeName) {
+            const prof = getComprehensiveProfile(activeId || activeName || 'Arjun Mehta');
+            setUser(prof.user);
+            setSkills(prof.skills);
+            setEvidence(prof.evidence);
+            setProjects(prof.projects);
+            setCareerGoal(prof.careerGoal);
+          }
+        }}
       />
     </div>
   );

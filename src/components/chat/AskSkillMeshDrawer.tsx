@@ -100,7 +100,7 @@ export const AskSkillMeshDrawer: React.FC<AskSkillMeshDrawerProps> = ({
         text: `Based on your current 82% fit for ${user.targetRole}, your Python (87%) and React (90%) nodes are exceptionally strong. Your primary leverage point is acquiring tangible proof in MLOps & TensorRT-LLM container deployments.`,
         timestamp: 'Just now',
         actionSuggestions: [
-          { label: 'View 3D Universe', actionType: 'navigate_tab', payload: 'universe' },
+          { label: 'View My Skills', actionType: 'navigate_tab', payload: 'skills' },
           { label: 'Open Gap Roadmap', actionType: 'navigate_tab', payload: 'pathway' }
         ]
       };

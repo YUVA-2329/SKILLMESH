@@ -86,11 +86,11 @@ export const CommandCenterDashboard: React.FC<CommandCenterDashboardProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onNavigate('universe')}
+            onClick={() => onNavigate('skills')}
             className="px-3.5 py-2 rounded-xl glass-pearl hover:bg-white text-xs font-bold text-[#1b1b1d] border border-white/80 shadow-2xs flex items-center gap-1.5 transition-all"
           >
-            <Layers className="w-3.5 h-3.5 text-[#0058bc]" />
-            <span>Open 3D Universe</span>
+            <Award className="w-3.5 h-3.5 text-[#0058bc]" />
+            <span>My Skills</span>
           </button>
           <button
             onClick={() => onNavigate('resume')}
@@ -316,7 +316,7 @@ export const CommandCenterDashboard: React.FC<CommandCenterDashboardProps> = ({
 
           <div className="mt-6 space-y-2">
             <button
-              onClick={() => onNavigate('universe')}
+              onClick={() => onNavigate('skills')}
               className="w-full py-2.5 rounded-xl bg-[#0058bc] hover:bg-[#004899] text-white text-xs font-bold transition-colors shadow-xs"
             >
               Start Mission Verification
@@ -334,16 +334,16 @@ export const CommandCenterDashboard: React.FC<CommandCenterDashboardProps> = ({
       {/* Quick Launch Cards Row */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div 
-          onClick={() => onNavigate('universe')}
+          onClick={() => onNavigate('skills')}
           className="glass-liquid p-4 rounded-2xl border border-white/80 hover:bg-white cursor-pointer transition-all shadow-xs group"
         >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-[#0058bc]/10 text-[#0058bc] group-hover:scale-105 transition-transform">
-              <Layers className="w-4 h-4" />
+              <Award className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-[#1b1b1d]">3D Skill Galaxy</h4>
-              <p className="text-[11px] text-[#717786]">Interactive node mesh</p>
+              <h4 className="text-xs font-bold text-[#1b1b1d]">Verified Skills Ledger</h4>
+              <p className="text-[11px] text-[#717786]">Interactive capability list</p>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   Github, 
   Sparkles, 
   FileText, 
+  Award,
   X 
 } from 'lucide-react';
 import { ActiveTab, SkillNode, OpportunityItem, PersonProfile } from '../../types';
@@ -56,7 +57,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
   const filteredPeople = people.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.organization.toLowerCase().includes(query.toLowerCase()));
 
   const quickActions: { label: string; tab: ActiveTab; icon: React.ReactNode; desc: string }[] = [
-    { label: '3D Living Universe', tab: 'universe', icon: <Layers className="w-4 h-4 text-[#0058bc]" />, desc: 'Explore full 3D interactive skill galaxy' },
+    { label: 'My Verified Skills', tab: 'skills', icon: <Award className="w-4 h-4 text-[#0058bc]" />, desc: 'Review current strength, decay rates, and verified proofs' },
     { label: 'Evidence & Verification Vault', tab: 'evidence', icon: <ShieldCheck className="w-4 h-4 text-[#4a47d2]" />, desc: 'Review STRONG code proofs and certificates' },
     { label: 'AI Gap-Closing Projects', tab: 'projects', icon: <FolderGit2 className="w-4 h-4 text-emerald-600" />, desc: 'Build and prove target skills' },
     { label: 'High-Match Opportunities', tab: 'opportunities', icon: <Briefcase className="w-4 h-4 text-amber-600" />, desc: 'Matched jobs, grants, and hackathons' },
@@ -133,7 +134,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                   <button
                     key={skill.id}
                     onClick={() => {
-                      onNavigate('universe');
+                      onNavigate('skills');
                       onSelectSkill(skill);
                       onClose();
                     }}
