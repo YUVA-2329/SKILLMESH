@@ -1,0 +1,6 @@
+{
+  "name": "SkillMesh",
+  "description": "AI-native career intelligence platform with living 3D skill graph, evidence verification, and career operating system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
