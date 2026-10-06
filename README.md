@@ -9,7 +9,7 @@
 
 ## 🎬 Demo & 📸 Screenshots
 
-![SkillMesh Preview](https://via.placeholder.com/800x400?text=SkillMesh+Preview)
+
 
 *(Project preview and screenshots demonstrating the core user experience)*
 
